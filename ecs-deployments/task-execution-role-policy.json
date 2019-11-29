@@ -1,0 +1,20 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": ["ssm:GetParameters"],
+            "Resource": ["${CREDSPECARN}"]
+        },
+        {
+            "Effect": "Allow",
+            "Action": ["ssm:GetParameters"],
+            "Resource": ["${SQLPASSWORDARN}"]
+        },
+        {
+            "Effect": "Allow",
+            "Action": ["s3:Get*","s3:List*"],
+            "Resource": ["arn:aws:s3:::${S3BUCKETNAME}", "arn:aws:s3:::${S3BUCKETNAME}/credspec.json"]
+        }
+    ]
+}

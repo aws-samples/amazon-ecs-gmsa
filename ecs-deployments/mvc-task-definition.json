@@ -1,0 +1,28 @@
+{
+  "family": "mvc-frontend",
+  "containerDefinitions": [
+    {
+      "name": "container-mvc",
+      "image": "containermvc-web:latest",
+      "cpu": 512,
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "containerPort": 80,
+          "hostPort": 443
+        }
+      ],
+      "environment": [
+          {
+              "name": "connectionstring",
+              "value": "Server=${SQLSERVER};Database = Bookstore; Trusted_Connection=true;"
+          }
+      ],
+      "dockerSecurityOptions": [
+          "credentialspec:${CREDSPECARN}"
+      ],
+      "memory": 768,
+      "essential": true
+    }
+  ]
+}

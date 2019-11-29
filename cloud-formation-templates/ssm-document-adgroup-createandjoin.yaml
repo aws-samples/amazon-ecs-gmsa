@@ -1,0 +1,150 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: This example template describes an Amazon EC2 Systems Manager document.
+  It contains a sample script that can be used to create an Active
+  Directory security group and adds the instance to the newly created group. This document
+  uses the domain user name and password that is stored in the SSM parameter. 
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+
+      - Label:
+          default: Active Directory Settings
+        Parameters:
+          - DirectoryNameParameter
+          - ADUserNameParameter
+          - ADUserPasswordParameter
+
+      - Label:
+          default: gMSA Settings
+        Parameters:
+          - gMSAADSecurityGroup
+
+Parameters:
+
+  DirectoryNameParameter:
+    Description: 'SSM Parameter name to use for Active Directory Name:'
+    MaxLength: '1024'
+    MinLength: '1'
+    Type: AWS::SSM::Parameter::Value<String>
+
+  ADUserNameParameter:
+    Description: 'SSM Parameter name to use for AD User name:'
+    MaxLength: '1024'
+    MinLength: '1'
+    Type: AWS::SSM::Parameter::Value<String>
+
+  ADUserPasswordParameter:
+    AllowedPattern: (?!^([aA][wW][sS]|[sS][sS][mM]))(?=^[-a-zA-Z0-9_.]*$).*
+    ConstraintDescription: please specify a valid Parameter Store name.
+    Description: 'SSM Parameter name to use for AD User password:'
+    MaxLength: '1024'
+    MinLength: '1'
+    Type: String
+
+  gMSAADSecurityGroup:
+    Type: String
+    Description: 'Active Directory security group to join the instance, that controls access to the gMSA password.'
+
+Resources:
+
+  Document:
+    Type: AWS::SSM::Document
+
+    Properties:
+
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: Run a PowerShell script to domain join a Windows instance securely.
+
+        parameters:
+
+          DirectoryName:
+            type: String
+            default: !Ref DirectoryNameParameter
+
+          ADUserName:
+            type: String
+            default: !Ref ADUserNameParameter
+
+          ADUserPasswordParam:
+            type: String
+            default: !Ref ADUserPasswordParameter
+
+          ADSecurityGroup:
+            type: String
+            default: !Ref gMSAADSecurityGroup
+
+        mainSteps:
+
+        - action: aws:runPowerShellScript
+          name: CreateAndJoinADSecurityGroup
+          precondition:
+            StringEquals:
+             - platformType
+             - Windows
+          inputs:
+            runCommand:
+            - "Fn::Sub": |
+                # Example PowerShell script to create an AD security group.
+                $ErrorActionPreference = "Stop"
+                try {
+                    # Retrieve configuration values from parameters
+                    $domain = "{{DirectoryName}}"
+                    $username = "{0}\{1}" -f $domain, "{{ADUserName}}"
+                    $password = (Get-SSMParameterValue -Name "{{ADUserPasswordParam}}" -WithDecryption $True).Parameters[0].Value | ConvertTo-SecureString -asPlainText -Force
+
+                    $gMSASecurityGroup = "{{ADSecurityGroup}}"
+
+                    # Create a System.Management.Automation.PSCredential object
+                    $credential = New-Object System.Management.Automation.PSCredential($username, $password)
+
+                    # The following block may be executed in all instances concurrently.
+                    # There are cases where duplicate AD security groups got created. 
+                    # So it is advisable to use one instance at a time.
+                    # Check for AD security group existence before creating.
+                    Write-Output ("Creating new AD security group :{0}" -f $gMSASecurityGroup)
+                    $group = Get-ADGroup -Filter "Name -eq `"$gMSASecurityGroup`""
+                    if($null -eq $group) {
+                        New-ADGroup -Name $gMSASecurityGroup -SamAccountName $gMSASecurityGroup -GroupScope DomainLocal -Credential $credential
+                        $group = Get-ADGroup -Filter "Name -eq `"$gMSASecurityGroup`""
+                    } else {
+                        Write-Output "AD Security group:$gMSASecurityGroup exists already."
+                    }
+
+                    $hostname = Invoke-Expression -Command "Hostname"
+                    $computer = Get-ADComputer -Filter "Name -eq `"$hostname`"" -Credential $credential
+                    Write-Output ("Adding host :{0} to the AD security group :{1}" -f $computer.DistinguishedName, $gMSASecurityGroup)
+                    Add-ADGroupMember -Identity $group.ObjectGUID -Members $computer.DistinguishedName -Credential $credential
+
+                    Restart-Computer -Force
+
+                } catch [Exception] {
+                    Write-Output $_.Exception.ToString()
+                    Write-Output "Command execution failed."
+                    $host.SetShouldExit(1)
+                }
+
+Outputs:
+  DocumentName:
+    Description: The name of the document.
+    Export:
+      Name: !Sub '${AWS::StackName}-Document'
+    Value: !Ref 'Document'

@@ -1,0 +1,38 @@
+{
+  "family": "sql-backend",
+  "containerDefinitions": [
+    {
+      "name": "container-sql",
+      "image": "containersql-bookstore:latest",
+      "cpu": 512,
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "containerPort": 1433,
+          "hostPort": 1433
+        }
+      ],
+      "environment": [
+          {
+              "name": "ACCEPT_EULA",
+              "value": "Y"
+          },
+          {
+            "name": "gMSA_User",
+            "value": "${NETBIOSNAME}\\${GMSAACCOUNT}$"
+          }
+      ],
+      "dockerSecurityOptions": [
+          "credentialspec:${CREDSPECARN}"
+      ],
+      "secrets": [
+        {
+        "name": "SA_PASSWORD",
+        "valueFrom": "${GMSASQLSASECRETPARAM}"
+        }
+      ],
+      "memory": 768,
+      "essential": true
+    }
+  ]
+}
