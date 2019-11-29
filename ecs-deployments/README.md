@@ -74,7 +74,7 @@ $TaskExecutionRoleArn = aws iam create-role --role-name $gMSATaskExecutionRole -
 aws iam attach-role-policy --role-name $gMSATaskExecutionRole --policy-arn $TaskPolicyArn
 ```
 
-### Deploy Applications
+### Deploy Task definitions
 ```powershell
 $containerdef = Get-Content -Path ./sql-task-definition.json | Foreach-Object {$_ -replace '\${NETBIOSNAME}', $adDirectoryShortName} | Foreach-Object {$_ -replace '\${GMSAACCOUNT}', $gMSAAccountName} | Foreach-Object {$_ -replace '\${CREDSPECARN}', $ssmCredSpecARN} | Foreach-Object {$_ -replace '\${GMSASQLSASECRETPARAM}', $sqlpasswordarn}
 
