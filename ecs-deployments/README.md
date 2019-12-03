@@ -66,7 +66,7 @@ aws ssm put-parameter --name $gMSASQLPasswordParam --type SecureString --value $
 $sqlpasswordarn = aws ssm get-parameter --name $gMSASQLPasswordParam --query "Parameter.ARN" --output text
 ```
 
-## Task Executio Role
+## Task Execution Role
 ```
 $TaskExecutionPolicyContent = Get-Content -Path ./task-execution-role-policy.json | Foreach-Object {$_ -replace '\${CREDSPECARN}', $ssmCredSpecARN} | Foreach-Object {$_ -replace '\${SQLPASSWORDARN}', $sqlpasswordarn} |  Foreach-Object {$_ -replace '\${S3BUCKETNAME}', $gMSACredSpecS3bucket}
 $TaskPolicyArn = aws iam create-policy --policy-name "$gMSATaskExecutionRole-policy"  --policy-document ("$TaskExecutionPolicyContent" | ConvertTo-Json) --query "Policy.Arn"

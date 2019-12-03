@@ -15,8 +15,6 @@ $adUserPassword = "xxxxx" # AD User password.Substitute xxxxx with a strong pass
 $vpcId = "xxxxx" # Active Director VPC ID. It should be same as ECS Workers VPC. Cross VPC AD communication is not discussed here.
 $subnets = "subnet-0xxxxx\,subnet-0xxxxx" # Replace 0xxxxx with subnet Ids in the VPC. Pick two subnet ids and make sure AD is available in those availability zones. Don't remove "\". AD is only available in certain AZs.
 $sqlSAPassword = "xxxxx" # SQL SA password will be created as a secret.
-$nodeInstanceRole = "xxxxx" # ECS Windows worker node's instance role.
-$autoScalingGroup = "xxxxx" # Autoscaling group name of ECS Windows workers. You can get the value from instance tag. Tag name : aws:autoscaling:groupName.
 $gMSACredSpecS3bucket = "xxxxx" # S3 bucket that stores gMSA credential spec file. Make sure the bucket exists.
 ##### ACTION REQUIRED - END #####
 

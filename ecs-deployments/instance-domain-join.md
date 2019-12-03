@@ -7,8 +7,15 @@ This document gives list of steps to attach the domain join SSM document.
 aws iam attach-role-policy --role-name $nodeInstanceRole --policy-arn $CMKPolicyArn
 
 # Attach SSM Policy to EC2 Instance
-aws iam attach-role-policy --role-name $nodeInstanceRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+aws iam attach-role-policy --role-name $nodeInstanceRole --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 ```
+
+##### ACTION REQUIRED - START #####
+```powershell
+$nodeInstanceRole = "xxxxx" # ECS Windows worker node's instance role.
+$autoScalingGroup = "xxxxx" # Autoscaling group name of ECS Windows workers. You can get the value from instance tag. Tag name : aws:autoscaling:groupName.
+```
+##### ACTION REQUIRED - END #####
 
 ## 2. Attach Domain Join SSM document to ECS Windows Autoscaling group
 ```powershell
@@ -20,6 +27,8 @@ aws ssm list-associations --association-filter-list "key=Name, value=$domainjoin
 ```
 
 ## 3. Create and join gMSA AD security group (Optional)
+*Before proceeding further, you need to wait for the domain join SSM document execution. You can check the status in SSM Runcommand or under State manager.*
+
 *If the AD security group exists already prior to domain join, the worker instance will be added to that security group during domain join. Otherwise, you need to execute this document to create and join AD. AD security group creation shouldn't be executed concurrently. Concurrent execution will result into duplicate AD group creation. Hence this needs to be run one instance at a time. This SSM document shoudn't be attached to autoscaling group*
 
 ```powershell
