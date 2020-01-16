@@ -52,7 +52,7 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
 
   ADUserPasswordParameter:
-    AllowedPattern: (?!^([aA][wW][sS]|[sS][sS][mM]))(?=^[-a-zA-Z0-9_.]*$).*
+    AllowedPattern: (?!^([aA][wW][sS]|[sS][sS][mM]))(?=^[-a-zA-Z0-9_.\/]*$).*
     ConstraintDescription: please specify a valid Parameter Store name.
     Description: 'SSM Parameter name to use for AD User password:'
     MaxLength: '1024'
